@@ -59,9 +59,15 @@ class SFTConfig(TrainingArguments):
             Monkey patch the model with Liger kernels to increase throughput and reduce memory usage.
     """
     model_name: str = ""
+    max_steps: int = 1000  # Adjust based on dataset size and desired training duration
+    per_device_train_batch_size: int = 8 # Set according to your GPU memory capacity
+    learning_rate: float = 5e-5 # Common starting point for fine-tuning
+    logging_steps: int = 10  # Frequency of logging training metrics
+    save_steps: int = 100 # Frequency of saving model checkpoints
+    eval_steps: int = 50  # Frequency of evaluation
+    evaluation_strategy: str = "steps"
     dataset_text_field: str = "text"
     packing: bool = False
-    learning_rate: float = 2.0e-5
     max_seq_length: Optional[int] = None
     dataset_num_proc: Optional[int] = None
     dataset_batch_size: int = 1000

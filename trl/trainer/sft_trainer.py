@@ -259,6 +259,13 @@ class SFTTrainer(Trainer):
             if data_collator is None:
                 data_collator = DataCollatorForLanguageModeling(tokenizer=processing_class, mlm=False)
 
+        # args.dataset_kwargs["skip_prepare_dataset"] = True
+        # with PartialState().local_main_process_first():
+        #     train_dataset = self._prepare_dataset_chat_deception(args, train_dataset, model, processing_class)
+        #
+        #     eval_dataset = self._prepare_dataset_chat_deception(args, eval_dataset, model, processing_class)
+
+
         # Pre-process the datasets only once per node. The remaining processes will use the cache.
         with PartialState().local_main_process_first():
             if train_dataset is not None:
@@ -327,6 +334,35 @@ class SFTTrainer(Trainer):
                 self.train_dataset.infinite = True
             elif self.args.max_steps == -1 and args.packing:
                 self.train_dataset.infinite = False
+
+    def _prepare_dataset_chat_deception(self, args, dataset, model, tokenizer):
+
+        def _format_message(statement, response):
+            model_name = args.model_name
+            prompt_template = "You are to answer the following questions in a lying manner. Is the following statement true or false? Statement: {statement}"
+            response_template = "Answer: The statement is {response}"
+
+            prompt_full = prompt_template.format(prompt_template, statement=statement)
+            response_full = response_template.format(response_template, response=response)
+
+            if model_name == "gemma-2b-it":
+                message = [
+                    # {"role": "system", "content": "example system"},
+                    {"role": "user", "content": prompt_full},
+                    {"role": "assistant", "content": response_full},
+                ]
+            return message
+
+        messages  = list(map(_format_message, dataset["statement"], dataset["response_lying"]))
+        formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False)
+
+        # Generate response
+        inputs = tokenizer(formatted_prompt,
+                           return_tensors="pt",
+                           padding=True).to(model.device)
+
+        return inputs
+
 
     def _prepare_dataset(
         self,
@@ -413,6 +449,7 @@ class SFTTrainer(Trainer):
         # Inspired from: https://huggingface.co/learn/nlp-course/chapter7/6?fw=pt
         def tokenize(element):
             outputs = processing_class(
+
                 element[dataset_text_field] if formatting_func is None else formatting_func(element),
                 add_special_tokens=add_special_tokens,
                 truncation=True,
