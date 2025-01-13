@@ -40,11 +40,17 @@ def conversations_formatting_function(
             output_texts = []
             for i in range(len(examples[messages_field])):
                 output_texts.append(
-                    tokenizer.apply_chat_template(examples[messages_field][i], tokenize=False, tools=tools)
+                    tokenizer.apply_chat_template(examples[messages_field][i],
+                                                  tokenize=False,
+                                                  add_generation_prompt=False, #
+                                                  tools=tools)
                 )
             return output_texts
         else:
-            return tokenizer.apply_chat_template(examples[messages_field], tokenize=False, tools=tools)
+            return tokenizer.apply_chat_template(examples[messages_field],
+                                                 tokenize=False,
+                                                 add_generation_prompt=False,
+                                                 tools=tools)
 
     return format_dataset
 
