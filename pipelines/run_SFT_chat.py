@@ -177,7 +177,7 @@ def main(model_path="google/gemma-2b-it", output_dir=""):
 
     ds = load_dataset(
         "winnieyangwannan/azaria-mitchell-finetune", split="train"
-    ).train_test_split(test_size=0.1)
+    ).train_test_split(test_size=0.1, seed=0)
 
     train_dataset = prepare_dataset_chat_deception(model_name, ds["train"])
     eval_dataset = prepare_dataset_chat_deception(model_name, ds["test"])
