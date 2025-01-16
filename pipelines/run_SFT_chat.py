@@ -111,7 +111,7 @@ def prepare_dataset_chat_deception(model_name_small, dataset, lying_only=False):
         labels = dataset["label"]
 
     else:
-        messages = list(map(_construct_message_both, dataset["statement"], dataset["response_honest"], dataset["response_lying"]))
+        messages = list(map(_construct_message_both, dataset["statement"], dataset["response_big_honest"], dataset["response_big_lying"]))
         messages = sum(messages, [])
         categories = list(map(_construct_category, dataset["category"]))
         labels = list(map(_construct_category, dataset["label"]))
