@@ -70,7 +70,7 @@ class SFTConfig(TrainingArguments):
     packing: bool = False
     max_seq_length: Optional[int] = None
     dataset_num_proc: Optional[int] = None
-    dataset_batch_size: int = 10
+    dataset_batch_size: int = 32
     model_init_kwargs: Optional[dict[str, Any]] = None
     dataset_kwargs: Optional[dict[str, Any]] = None
     eval_packing: Optional[bool] = None

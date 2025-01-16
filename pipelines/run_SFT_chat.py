@@ -150,9 +150,12 @@ def main(model_path_small="google/gemma-2b-it",
     # Load the model and tokenizer
 
     model = AutoModelForCausalLM.from_pretrained(
-        pretrained_model_name_or_path=model_path_small
+        pretrained_model_name_or_path=model_path_small,
+        torch_dtype="bfloat16"
     ).to(device)
-    tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=model_path_small)
+    tokenizer = AutoTokenizer.from_pretrained(
+        pretrained_model_name_or_path=model_path_small,
+        )
     tokenizer.padding_side = "right"
     # Set up the chat format
     if "chat" not in model_name_small.lower() and "it" not in model_name_small.lower():
@@ -187,6 +190,13 @@ def main(model_path_small="google/gemma-2b-it",
          f"winnieyangwannan/azaria-mitchell-finetune-{model_family_small}-{model_family_big}",
         split="train"
     ).train_test_split(test_size=0.1, seed=0)
+
+
+
+    true_ans = [ds["train"][ii]["answer"] for ii in range(len(ds["train"])) if ds["train"][ii]["answer"]=="true"]
+    false_ans = [ds["train"][ii]["answer"] for ii in range(len(ds["train"])) if ds["train"][ii]["answer"]=="false"]
+    print(f"true statement in training set: {len(true_ans)}")
+    print(f"false statement in training set: {len(false_ans)}")
 
     train_dataset = prepare_dataset_chat_deception(model_name_small, ds["train"])
     eval_dataset = prepare_dataset_chat_deception(model_name_small, ds["test"])
