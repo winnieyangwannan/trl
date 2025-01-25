@@ -1,3 +1,4 @@
+from statsmodels.sandbox.stats.multicomp import TukeyHSDResults
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from pipelines.configs.sft_chat_config import SFTConfig
 from trl import (SFTTrainer, setup_chat_format)
@@ -31,7 +32,7 @@ def parse_arguments():
     parser.add_argument("--do_sample", type=bool, required=False, default=True)
     parser.add_argument("--temperature", type=float, required=False, default=1.0)
     parser.add_argument("--task_name", type=str, required=False, default='sft_to_honest')
-    parser.add_argument("--lora", type=bool, required=False, default=True)
+    parser.add_argument("--lora", type=str, required=False, default="true")
 
     return parser.parse_args()
 
@@ -50,7 +51,7 @@ def main(model_path="google/gemma-2b-it",
     data_type = "honest_lying"
     finetune_tags = [model_name, data_type, task_name, f"lora_{lora}"]
     output_path = os.path.join(output_dir, task_name, model_name, f"lora_{lora}")
-    finetune_name = f"{model_name}-{data_type}-{task_name}-lora_{lora}"
+    finetune_name = f"{model_name}_{data_type}_{task_name}_lora_{lora}"
     run_name = f"{finetune_name}"
     hub_model_id = finetune_name
 
@@ -63,9 +64,14 @@ def main(model_path="google/gemma-2b-it",
         bnb_4bit_use_double_quant=True,
         bnb_4bit_compute_dtype=torch.bfloat16
     )
-    model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=model_path,
-                                                 load_in_4bit=True).to(device)
-
+    if lora:
+        model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=model_path,
+                                                     load_in_4bit=True).to(device)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=model_path,
+                                                     device_map="auto",
+                                                     torch_dtype=torch.bfloat16
+                                                     )
     # model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=model_path,
     #                                              device_map="auto",
     #                                              quantizaton_config=nf4_config)
@@ -86,7 +92,7 @@ def main(model_path="google/gemma-2b-it",
         pretrained_model_name_or_path=model_path,
         )
     tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "right"
+    tokenizer.padding_side = "left"
     # Set up the chat format
     if "chat" not in model_name.lower() and "it" not in model_name.lower() and "instruct" not in model_name.lower():
          model, tokenizer = setup_chat_format(model=model, tokenizer=tokenizer)
@@ -170,6 +176,18 @@ def main(model_path="google/gemma-2b-it",
 if __name__ == "__main__":
 
     args = parse_arguments()
+
+
+    print("lora")
+    print(args.lora)
+    if args.lora == "true":
+        args.lora = True
+    if args.lora == "false":
+        args.lora = False
+
+    print("lora after")
+    print(args.lora)
+
     main(model_path=args.model_path,
          output_dir=args.output_dir,
          task_name=args.task_name,
