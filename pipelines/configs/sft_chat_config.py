@@ -59,8 +59,12 @@ class SFTConfig(TrainingArguments):
             Monkey patch the model with Liger kernels to increase throughput and reduce memory usage.
     """
     model_name: str = ""
-    max_steps: int = 1000  # Adjust based on dataset size and desired training duration
-    per_device_train_batch_size: int = 8 # Set according to your GPU memory capacity
+    num_train_epochs = 1
+    max_steps: int = -1  # Adjust based on dataset size and desired training duration # use epoch rather than max_steps
+    per_device_train_batch_size: int = 16 #32 # Set according to your GPU memory capacity
+    per_device_eval_batch_size: int = 16
+    per_device_test_batch_size: int = 16 #32 # Set according to your GPU memory capacity
+    gradient_accumulation_steps: int = 1
     learning_rate: float = 5e-5 # Common starting point for fine-tuning
     logging_steps: int = 10  # Frequency of logging training metrics
     save_steps: int = 100 # Frequency of saving model checkpoints
@@ -68,12 +72,16 @@ class SFTConfig(TrainingArguments):
     evaluation_strategy: str = "steps"
     dataset_text_field: str = "text"
     packing: bool = False
-    max_seq_length: Optional[int] = None
     dataset_num_proc: Optional[int] = None
-    dataset_batch_size: int = 32
+    max_seq_length: int = 256
+    dataset_batch_size: int = 256
     model_init_kwargs: Optional[dict[str, Any]] = None
     dataset_kwargs: Optional[dict[str, Any]] = None
     eval_packing: Optional[bool] = None
     num_of_sequences: int = 1024
     chars_per_token: float = 3.6
     use_liger: bool = False
+    push_to_hub: bool = True
+    # fp16: bool = True
+    bf16: bool = True # if with a100 gpu
+    hub_strategy: str = "all_checkpoints"
