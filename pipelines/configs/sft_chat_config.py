@@ -60,15 +60,15 @@ class SFTConfig(TrainingArguments):
     """
     model_name: str = ""
     num_train_epochs = 1
-    max_steps: int = -1  # Adjust based on dataset size and desired training duration # use epoch rather than max_steps
-    per_device_train_batch_size: int = 16 #32 # Set according to your GPU memory capacity
-    per_device_eval_batch_size: int = 16
-    per_device_test_batch_size: int = 16 #32 # Set according to your GPU memory capacity
+    max_steps: int = 10  # Adjust based on dataset size and desired training duration # use epoch rather than max_steps
+    per_device_train_batch_size: int = 16 # 32 for LoRA # 16 for full # Set according to your GPU memory capacity
+    per_device_eval_batch_size: int = 16 # 32 for LoRA  # 16 for full # Set according to your GPU memory capacity
+    per_device_test_batch_size: int = 16 #32 for LoRA  # 16 for full # Set according to your GPU memory capacity
     gradient_accumulation_steps: int = 1
     learning_rate: float = 5e-5 # Common starting point for fine-tuning
-    logging_steps: int = 10  # Frequency of logging training metrics
-    save_steps: int = 100 # Frequency of saving model checkpoints
-    eval_steps: int = 50  # Frequency of evaluation
+    logging_steps: int = 1  # Frequency of logging training metrics
+    save_steps: int = 1 # Frequency of saving model checkpoints
+    eval_steps: int = 1  # Frequency of evaluation
     evaluation_strategy: str = "steps"
     dataset_text_field: str = "text"
     packing: bool = False

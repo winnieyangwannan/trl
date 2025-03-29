@@ -1,8 +1,9 @@
 from statsmodels.sandbox.stats.multicomp import TukeyHSDResults
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from trl import DPOTrainer, DPOConfig
+from pipelines.configs.dpo_config import DPOConfig
 
-from pipelines.configs.sft_chat_config import SFTConfig
-from trl import (SFTTrainer, setup_chat_format)
+# from trl import (SFTTrainer, setup_chat_format)
 import torch
 from datasets import Dataset
 from pipelines.dataset_deception import prepare_dataset_chat_deception
@@ -34,7 +35,7 @@ def parse_arguments():
 
     parser.add_argument("--do_sample", type=bool, required=False, default=True)
     parser.add_argument("--temperature", type=float, required=False, default=1.0)
-    parser.add_argument("--task_name", type=str, required=False, default='sft_to_honest')
+    parser.add_argument("--task_name", type=str, required=False, default='dpo_to_honest')
     parser.add_argument("--lora", type=str, required=False, default="true")
 
     return parser.parse_args()
@@ -57,6 +58,8 @@ def main(model_path="google/gemma-2b-it",
     finetune_name = f"{model_name}_{data_type}_{task_name}_lora_{lora}"
     run_name = f"{finetune_name}"
     hub_model_id = finetune_name
+
+    print(f"hub_model_id: {hub_model_id}")
 
 
     ##############################################
@@ -85,21 +88,22 @@ def main(model_path="google/gemma-2b-it",
         )
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"
-    # Set up the chat format
-    if "chat" not in model_name.lower() and "it" not in model_name.lower() and "instruct" not in model_name.lower():
-         model, tokenizer = setup_chat_format(model=model, tokenizer=tokenizer)
 
 
 
     ###################################################################################
     # Load dataset
 
-
-    ds = load_dataset(
-         # f"jojoyang/{model_name}_Filter2Honest_TrainTest_240",
-        f"winnieyangwannan/azaria-mitchell_{model_name}_{task_name}"
-    )
-
+    if task_name == "dpo_to_lie":
+        ds = load_dataset(
+             # f"jojoyang/{model_name}_Filter2Honest_TrainTest_240",
+            f"winnieyangwannan/azaria-mitchell_{model_name}_sft_to_lie"
+        )
+    elif task_name == "dpo_to_honest":
+        ds = load_dataset(
+             # f"jojoyang/{model_name}_Filter2Honest_TrainTest_240",
+            f"winnieyangwannan/azaria-mitchell_{model_name}_sft_to_honest"
+        )
 
     true_ans = [ds["train"][ii] for ii in range(len(ds["train"])) if ds["train"][ii]["answer"]=="true"]
     false_ans = [ds["train"][ii]  for ii in range(len(ds["train"])) if ds["train"][ii]["answer"]=="false"]
@@ -110,21 +114,14 @@ def main(model_path="google/gemma-2b-it",
 
     # formatting the data as messages
     train_dataset = prepare_dataset_chat_deception(model_name, ds["train"], task_name=task_name)
-    eval_dataset = prepare_dataset_chat_deception(model_name, ds["test"], task_name=task_name)
-    ############################################################################
+    # eval_dataset = prepare_dataset_chat_deception(model_name, ds["test"], task_name=task_name)
+############################################################################
 
+    per_device_train_batch_size = 16
+    per_device_test_batch_size = 16
+    per_device_eval_batch_size = 16
 
-    # Configure the SFTTrainer
-    if "Yi" in model_name:
-        per_device_train_batch_size = 32
-        per_device_test_batch_size = 32
-        per_device_eval_batch_size = 32
-    else:
-        per_device_train_batch_size = 16
-        per_device_test_batch_size = 16
-        per_device_eval_batch_size = 16
-
-    sft_config = SFTConfig(
+    dpo_config = DPOConfig(
         model_name=model_name,
         per_device_train_batch_size=per_device_train_batch_size,
         per_device_test_batch_size=per_device_test_batch_size,
@@ -133,7 +130,7 @@ def main(model_path="google/gemma-2b-it",
         hub_model_id=hub_model_id,  # Set a unique name for your model
         run_name=run_name) # for wandb
     #
-    print(sft_config)
+    print(dpo_config)
     #
 
     if lora:
@@ -148,22 +145,21 @@ def main(model_path="google/gemma-2b-it",
         print(peft_config)
 
         # Initialize the SFTTrainer
-        trainer = SFTTrainer(
+        trainer = DPOTrainer(
             model=model,
-            args=sft_config,
+            args=dpo_config,
             train_dataset=train_dataset,
             tokenizer=tokenizer,
-            eval_dataset=eval_dataset,
             peft_config=peft_config
         )
     else:
         # Initialize the SFTTrainer
-        trainer = SFTTrainer(
+        trainer = DPOTrainer(
             model=model,
-            args=sft_config,
+            args=dpo_config,
             train_dataset=train_dataset,
             tokenizer=tokenizer,
-            eval_dataset=eval_dataset,
+            # eval_dataset=eval_dataset,
         )
 
 
@@ -196,6 +192,8 @@ if __name__ == "__main__":
 
     print("task name")
     print(args.task_name)
+
+    print(f"torch.cuda.device_count(): {torch.cuda.device_count()}")
 
     main(model_path=args.model_path,
          output_dir=args.output_dir,
